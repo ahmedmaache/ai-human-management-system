@@ -1,0 +1,57 @@
+version: '3.8'
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app_network
+  production_agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.production_agent
+    depends_on:
+      - rabbitmq
+    networks:
+      - app_network
+    command: python production_agent.py
+  inventory_agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.inventory_agent
+    depends_on:
+      - rabbitmq
+    networks:
+      - app_network
+    command: python inventory_agent.py
+  dashboard:
+    build:
+      context: dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - rabbitmq
+    networks:
+      - app_network
+  odoo:
+      image: odoo:14
+      depends_on:
+          - db
+      ports:
+          - "8069:8069"
+      networks:
+         - app_network
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_DB=postgres
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
