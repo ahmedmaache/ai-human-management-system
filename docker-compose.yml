@@ -15,7 +15,16 @@ services:
       - rabbitmq
     networks:
       - app_network
+    environment:
+      - RABBITMQ_HOST=${rabbitmq_host}
+      - PROMETHEUS_PORT=${prometheus_port}
+    deploy:
+      resources:
+        limits:
+          cpus: "${max_cpu}"
+          memory: "${max_memory}"
     command: python production_agent.py
+
   inventory_agent:
     build:
       context: .
@@ -24,7 +33,16 @@ services:
       - rabbitmq
     networks:
       - app_network
+    environment:
+      - RABBITMQ_HOST=${rabbitmq_host}
+      - PROMETHEUS_PORT=${prometheus_port}
+    deploy:
+       resources:
+        limits:
+          cpus: "${max_cpu}"
+          memory: "${max_memory}"
     command: python inventory_agent.py
+
   dashboard:
     build:
       context: dashboard
@@ -35,6 +53,14 @@ services:
       - rabbitmq
     networks:
       - app_network
+    environment:
+      - RABBITMQ_HOST=${rabbitmq_host}
+    deploy:
+      resources:
+        limits:
+          cpus: "${max_cpu}"
+          memory: "${max_memory}"
+
   odoo:
       image: odoo:14
       depends_on:
@@ -51,7 +77,39 @@ services:
       - POSTGRES_DB=postgres
     networks:
       - app_network
+  data_processing:
+    build:
+      context: .
+      dockerfile: Dockerfile.data_processing
+    depends_on:
+      - rabbitmq
+    networks:
+      - app_network
+    environment:
+      - RABBITMQ_HOST=${rabbitmq_host}
+      - PROMETHEUS_PORT=${prometheus_port}
+    deploy:
+       resources:
+          limits:
+            cpus: "${max_cpu}"
+            memory: "${max_memory}"
+    command: python data_processing.py
 
+  iot_server:
+    build:
+      context: server_iot
+      dockerfile: Dockerfile
+    ports:
+        - "8069:8069"
+    networks:
+      - app_network
+    environment:
+      - API_KEY=${iot_api_key}
+    deploy:
+       resources:
+          limits:
+           cpus: "${max_cpu}"
+           memory: "${max_memory}"
 networks:
   app_network:
     driver: bridge
